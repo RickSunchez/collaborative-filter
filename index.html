@@ -1,0 +1,201 @@
+<meta charset="utf-8" />
+<link rel="stylesheet" href="../front/css/style.css" />
+<body>
+  <header>
+    <div class="content">
+      <a id="create-user" href="create_user.html">Добавить пользователя</a>
+      <button id="buy">Купить</button>
+      <div class="row">
+        <div id="region"></div>
+        <select id="userList"></select>
+      </div>
+    </div>
+  </header>
+  <main>
+    <div class="content">
+      <div class="container" id="categories"></div>
+      <div class="container" id="positions"></div>
+    </div>
+  </main>
+</body>
+
+<script>
+  var base = "http://127.0.0.1:5000";
+  var LIMIT = 20;
+  var COLUMNS = 2;
+  var data = {
+    set activeUser(value) {
+      this.au = value;
+      fetch(base + "/getUsers?ids=" + value)
+        .then((resp) => resp.json())
+        .then((json) => {
+          document.querySelector("#region").innerText = json.responce[0].region;
+        });
+    },
+    get activeUser() {
+      return this.au;
+    },
+  };
+
+  fetch(base + "/getUsers")
+    .then((resp) => resp.json())
+    .then((json) => {
+      var selector = document.querySelector("#userList");
+
+      for (user of json.responce) {
+        var opt = document.createElement("option");
+
+        opt.value = user.id;
+        opt.innerText = user.name;
+
+        selector.appendChild(opt);
+      }
+
+      data.activeUser = +selector.value;
+    });
+
+  fetch(base + "/getCategories")
+    .then((resp) => resp.json())
+    .then((json) => {
+      var parent = document.querySelector("#categories");
+
+      for (let i = 0; i < COLUMNS; i++) {
+        let d = LIMIT / COLUMNS;
+        let col = document.createElement("div");
+        for (let j = i * d; j < i * d + d; j++) {
+          let cat = json.responce[j];
+          var a = document.createElement("a");
+          a.href = "#" + translit(cat);
+          a.innerText = cat;
+
+          col.appendChild(a);
+        }
+
+        parent.appendChild(col);
+      }
+      // for (let i = 40; i < 40 + LIMIT; i++) {
+      //   let cat = json.responce[i];
+      //   var a = document.createElement("a");
+      //   a.href = "#" + translit(cat);
+      //   a.innerText = cat;
+
+      //   parent.appendChild(a);
+      // }
+    });
+
+  document.querySelector("#userList").addEventListener("change", (ev) => {
+    data.activeUser = +ev.target.value;
+  });
+
+  document.querySelector("#categories").addEventListener("click", (ev) => {
+    if (ev.target.tagName != "A") return false;
+
+    fetch(
+      base +
+        "/getByCategory?cat=" +
+        ev.target.innerText +
+        "&tr=" +
+        translit(ev.target.innerText)
+    )
+      .then((resp) => resp.json())
+      .then((json) => {
+        var parent = document.querySelector("#positions");
+
+        while (parent.childNodes.length > 0) {
+          parent.removeChild(parent.childNodes[0]);
+        }
+        for (pos of json.responce) {
+          let p = document.createElement("div");
+          let a = document.createElement("a");
+          let buy = document.createElement("button");
+
+          p.className = "position";
+          p.setAttribute("posID", pos.id);
+          p.setAttribute("onclick", "visitPos(this)");
+
+          a.innerText = pos.name;
+          buy.innerText = "В корзину";
+          buy.setAttribute("onclick", "addToBasket(this, event)");
+
+          p.appendChild(a);
+          p.appendChild(buy);
+          parent.appendChild(p);
+        }
+        console.log(json);
+      });
+  });
+
+  function visitPos(obj) {
+    if (document.querySelector(".position.active"))
+      document.querySelector(".position.active").classList.toggle("active");
+
+    var postID = obj.getAttribute("posID");
+    obj.classList.toggle("active");
+
+    fetch(base + "/addVisited?posID=" + postID + "&userID=" + data.activeUser)
+      .then((resp) => resp.json())
+      .then((json) => console.log(json));
+  }
+
+  function addToBasket(obj, ev) {
+    var postID = obj.parentNode.getAttribute("posID");
+    fetch(base + "/addToBasket?posID=" + postID + "&userID=" + data.activeUser)
+      .then((resp) => resp.json())
+      .then((json) => console.log(json));
+
+    ev.stopPropagation();
+  }
+
+  document.querySelector("#buy").addEventListener("click", (ev) => {
+    fetch(base + "/kupi?userID=" + data.activeUser)
+      .then((resp) => resp.json())
+      .then((json) => console.log(json));
+  });
+
+  function translit(t) {
+    var r = "",
+      a = {
+        а: "a",
+        б: "b",
+        в: "v",
+        г: "g",
+        д: "d",
+        е: "e",
+        ё: "e",
+        ж: "zh",
+        з: "z",
+        и: "i",
+        й: "j",
+        к: "k",
+        л: "l",
+        м: "m",
+        н: "n",
+        о: "o",
+        п: "p",
+        р: "r",
+        с: "s",
+        т: "t",
+        у: "u",
+        ф: "f",
+        х: "h",
+        ц: "c",
+        ч: "ch",
+        ш: "sh",
+        щ: "sh",
+        ъ: "-",
+        ы: "y",
+        ь: "-",
+        э: "e",
+        ю: "yu",
+        я: "ya",
+      };
+    "" != t && (t = t.toLowerCase());
+    for (var e = 0; e < t.length; e++)
+      /[а-яё]/.test(t.charAt(e))
+        ? (r += a[t.charAt(e)])
+        : /[a-z0-9]/.test(t.charAt(e))
+        ? (r += t.charAt(e))
+        : "-" !== r.slice(-1) && (r += "-");
+    return r;
+  }
+</script>

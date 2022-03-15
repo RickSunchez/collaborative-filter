@@ -1,0 +1,49 @@
+<meta charset="utf-8" />
+<link rel="stylesheet" href="../front/css/style.css" />
+<body>
+  <div class="container create-user-header">
+    <a id="index" href="../index.html">На главную страницу</a>
+
+    <form action="http://127.0.0.1:5000/addUser" id="addUserForm">
+      <input id="addUser" type="text" name="user_name" placeholder="Имя" />
+      <select id="chooseRegion" name="user_region"></select>
+      <input id="submitButton" type="submit" value="Добавить" />
+    </form>
+  </div>
+</body>
+
+<script>
+  var base = "http://127.0.0.1:5000";
+
+  console.log("Start fetching regions");
+  fetch(base + "/getRegions")
+    .then((resp) => resp.json())
+    .then((json) => {
+      console.log(json);
+      var selector = document.querySelector("#chooseRegion");
+
+      for (region of json.responce) {
+        var opt = document.createElement("option");
+        opt.innerText = region;
+
+        selector.appendChild(opt);
+      }
+    });
+
+  document.querySelector("#chooseRegion").addEventListener("change", (ev) => {
+    console.log(1);
+  });
+
+  document.querySelector("#addUserForm").addEventListener("submit", (ev) => {
+    ev.preventDefault();
+
+    const data = new FormData(ev.target);
+
+    fetch(base + "/addUser", {
+      method: "POST",
+      body: data,
+    })
+      .then((resp) => resp.json())
+      .then((answ) => console.log(answ));
+  });
+</script>
